@@ -1,61 +1,47 @@
-# 🚀 Smart Leads Dashboard (Lead Management System)
+# Lead Management System (Smart Leads)
 
-A production-ready, highly aesthetic Lead Management and Analytics platform built using the MERN stack with TypeScript. Every user enjoys complete multi-tenant style data isolation, secure authentication, and real-time visual analytics.
+A secure, multi-tenant lead management and tracking application built with the MERN stack (MongoDB, Express, React, Node.js) and TypeScript. 
+
+The application implements full multi-user data isolation, meaning users can only view, create, edit, search, and export leads that they have registered/created themselves.
 
 ---
 
-## ⚡ Quick Start: Spin Up Containerized Services
+## Technical Features
 
-We provide a complete containerized architecture (Frontend, Backend, and MongoDB) utilizing Docker and Compose. Named volumes keep database records fully persistent, and host directories are bind-mounted directly into the container workspace to support **hot module replacement (HMR)** and backend **hot-reloading** during development.
+* **Multi-User Data Isolation**: Every database query is scoped to the authenticated user's ID (`createdBy = req.user._id`), preventing data cross-leakage.
+* **Dynamic Pipeline Statistics**: Live KPIs (Total Leads, New, Contacted, Qualified, and Qualified Conversion Rate) are dynamically calculated via MongoDB aggregations for the active session.
+* **Debounced Search**: Typing queries into the fuzzy search input is buffered by 500ms using a custom React hook to prevent network flooding.
+* **Isolated CSV Export**: Custom utility to download filtered, user-specific data into a standard CSV format securely.
+* **Role-Based Access Control**: Clean JWT middleware protecting backend routes and supporting standard Sales User and Admin role workflows.
 
-### Prerequisites
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running.
+---
 
-### 🏃 Setup Commands
+## Local Development Setup with Docker
 
-1. **Spin Up the Containers**:
+The application is fully containerized. Persistent volumes ensure database state is saved locally, and bind-mount volumes are configured to enable hot-reloading (frontend HMR and backend auto-restart) when you modify the local files.
+
+### Commands
+
+1. **Start all services**:
    ```bash
    docker compose up --build
    ```
-   *This command will build the frontend and backend images, pull MongoDB, wire up the internal network, and mount your local code folders with hot-reloading active.*
+   This command installs dependencies, builds the Docker images, starts MongoDB, and launches the frontend and backend services.
 
-2. **Access the Application**:
-   - **Frontend App**: `http://localhost:5173`
-   - **Backend REST API**: `http://localhost:5000/api/v1`
-   - **Local MongoDB Database**: `mongodb://localhost:27017/leaderboard`
+2. **Access Points**:
+   - **Frontend Interface**: `http://localhost:5173`
+   - **Backend API**: `http://localhost:5000/api/v1`
+   - **Local MongoDB**: `mongodb://localhost:27017/leaderboard`
 
-3. **Shutdown Services**:
+3. **Stop all services**:
    ```bash
    docker compose down
    ```
-   *To completely remove container states but keep your persistent database volume.*
 
 ---
 
-## 🏗️ Core Architecture Overview
+## Port Mappings & Services
 
-### 🔒 User-Specific Multi-Tenant Isolation
-Every single database query or mutation in the backend is scoped strictly to the currently authenticated user session (`req.user._id` extracted from standard JWT tokens in Bearer headers):
-- **Leads Isolation**: Users (regardless of whether they are `Admin` or `Sales User`) can only see, search, edit, update, export, and delete leads they created.
-- **IDs Hardening**: The controller prevents accessing or deleting another tenant's lead by ID, returning a secure `404 Not Found or unauthorized access` block.
-- **Dynamic Stats**: The dashboard stats endpoint (`GET /api/v1/leads/stats`) leverages MongoDB Aggregation (`$match`, `$group`, and `$cond`) to compute metrics for the active session only.
-
-### 📊 Real-Time Analytics Cards Grid
-The dashboard features an aesthetic 4-card KPI grid dynamically linked to your lead statuses:
-1. **Total Leads**: Solid slate accent showing all leads created by your account.
-2. **New Leads**: Sky-blue accents highlighting incoming, uncontacted prospects.
-3. **Contacted Leads**: Warm amber accents showing active, in-progress prospects.
-4. **Qualified Leads**: Emerald-green accents calculating the active **Conversion Rate** (`Qualified / Total * 100`) dynamically inside a high-contrast pill badge.
-
-### 🔍 Debounced Search Filter
-The search bar implements a custom React hook `useDebounce.ts` with a **500ms delay**. This buffers your keyboard typing, preventing rapid and redundant API fetches, and only fires the fuzzy query matching when you stop typing.
-
-### 📥 Isolated CSV Data Export
-Clicking **Export CSV** triggers an isolated backend dataset download (`exportLeadsCSV` in `leadService.ts`). The system compiles matching records into clean tabular CSV columns without leaking metadata from other accounts.
-
----
-
-## 🛠️ Technology Stack
-- **Frontend**: React (v19), TypeScript, Vite (v8), Tailwind CSS (v4), Lucide Icons
-- **Backend**: Node.js, Express.js, TypeScript, Mongoose/MongoDB, JSON Web Tokens (JWT), BcryptJS
-- **Containerization**: Docker, Docker Compose, Nginx (high-performance client SPA serving)
+* **frontend**: Served on port `5173` (Nginx is used for production static serving, while Vite dev server with host binding is used in development for hot-reloading).
+* **backend**: Runs on port `5000` (uses `ts-node-dev` in development to watch file changes).
+* **db**: MongoDB instance running on port `27017` utilizing volume `mongo_data` for persistence.
