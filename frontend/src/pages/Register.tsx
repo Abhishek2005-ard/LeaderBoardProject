@@ -28,7 +28,7 @@ export const Register: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/register', { name, email, password, role });
+      const response = await api.post('/api/auth/register', { name, email, password, role });
       const { token, data } = response.data;
       login(token, data.user);
       navigate('/dashboard');

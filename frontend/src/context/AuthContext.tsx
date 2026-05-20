@@ -61,7 +61,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
 
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get('/api/auth/me');
       const user = response.data.data.user;
       setState({
         user,

@@ -18,10 +18,13 @@ const app = (0, express_1.default)();
 app.use((0, helmet_1.default)());
 // Dynamic CORS enabling cross-origin cookie credentials
 app.use((0, cors_1.default)({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    origin: process.env.CLIENT_URL
+        ? process.env.CLIENT_URL.split(',')
+        : [
+            "https://my-frontend.vercel.app",
+            "http://localhost:5173"
+        ],
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 // Request Logging in Development
 if (process.env.NODE_ENV === 'development') {
@@ -31,9 +34,18 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express_1.default.json({ limit: '10kb' }));
 // 2. ROOT & HEALTH CHECK ROUTES
 /**
+ * Root endpoint - simple health check
+ */
+app.get('/', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Backend is running'
+    });
+});
+/**
  * Health check endpoint - exposes API operational status and MongoDB connection status.
  */
-app.get('/api/v1/health', (req, res) => {
+app.get('/api/health', (req, res) => {
     const dbStatus = mongoose_1.default.connection.readyState === 1 ? 'healthy' : 'unhealthy';
     res.status(200).json({
         status: 'success',
@@ -44,8 +56,8 @@ app.get('/api/v1/health', (req, res) => {
     });
 });
 // Route Registration
-app.use('/api/v1/auth', authRoutes_1.default);
-app.use('/api/v1/leads', leadRoutes_1.default);
+app.use('/api/auth', authRoutes_1.default);
+app.use('/api/leads', leadRoutes_1.default);
 // 3. UNHANDLED ROUTE MIDDLEWARE
 app.all('*', (req, res, next) => {
     next(new appError_1.AppError(`Can't find ${req.originalUrl} on this server!`, 404));

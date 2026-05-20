@@ -25,7 +25,7 @@ export const Login: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('/api/auth/login', { email, password });
       const { token, data } = response.data;
       login(token, data.user);
       navigate('/dashboard');

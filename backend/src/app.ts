@@ -17,22 +17,17 @@ const app: Application = express();
 app.use(helmet());
 
 // Dynamic CORS enabling cross-origin cookie credentials
-const allowedOrigins = process.env.CLIENT_URL 
-  ? process.env.CLIENT_URL.split(',') 
-  : ['http://localhost:5173'];
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL 
+      ? process.env.CLIENT_URL.split(',') 
+      : [
+          "https://my-frontend.vercel.app",
+          "http://localhost:5173"
+        ],
+    credentials: true,
+  })
+);
 
 // Request Logging in Development
 if (process.env.NODE_ENV === 'development') {
@@ -49,15 +44,15 @@ app.use(express.json({ limit: '10kb' }));
  */
 app.get('/', (req: Request, res: Response) => {
   res.status(200).json({
-    status: 'success',
-    message: 'Welcome to the Smart Leads API. API is running on /api/v1'
+    success: true,
+    message: 'Backend is running'
   });
 });
 
 /**
  * Health check endpoint - exposes API operational status and MongoDB connection status.
  */
-app.get('/api/v1/health', (req: Request, res: Response) => {
+app.get('/api/health', (req: Request, res: Response) => {
   const dbStatus = mongoose.connection.readyState === 1 ? 'healthy' : 'unhealthy';
   res.status(200).json({
     status: 'success',
@@ -69,8 +64,8 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
 });
 
 // Route Registration
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/leads', leadRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/leads', leadRouter);
 
 // 3. UNHANDLED ROUTE MIDDLEWARE
 app.all('*', (req: Request, res: Response, next: NextFunction) => {

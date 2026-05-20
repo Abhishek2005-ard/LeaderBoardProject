@@ -12,32 +12,32 @@ export interface FetchLeadsParams {
 
 export const leadService = {
   fetchLeads: async (params: FetchLeadsParams): Promise<GetLeadsResponse> => {
-    const response = await api.get<GetLeadsResponse>('/leads', { params });
+    const response = await api.get<GetLeadsResponse>('/api/leads', { params });
     return response.data;
   },
 
   fetchLeadStats: async (): Promise<GetLeadStatsResponse> => {
-    const response = await api.get<GetLeadStatsResponse>('/leads/stats');
+    const response = await api.get<GetLeadStatsResponse>('/api/leads/stats');
     return response.data;
   },
 
   createLead: async (data: Partial<ILead>): Promise<{ data: { lead: ILead } }> => {
-    const response = await api.post('/leads', data);
+    const response = await api.post('/api/leads', data);
     return response.data;
   },
 
   updateLead: async (id: string, data: Partial<ILead>): Promise<{ data: { lead: ILead } }> => {
-    const response = await api.patch(`/leads/${id}`, data);
+    const response = await api.patch(`/api/leads/${id}`, data);
     return response.data;
   },
 
   deleteLead: async (id: string): Promise<void> => {
-    await api.delete(`/leads/${id}`);
+    await api.delete(`/api/leads/${id}`);
   },
 
   exportLeadsCSV: async (params: FetchLeadsParams): Promise<void> => {
     // Generate a temporary anchor to trigger browser download of the CSV stream
-    const response = await api.get('/leads/export', { 
+    const response = await api.get('/api/leads/export', { 
       params,
       responseType: 'blob' // Tell Axios to parse the response as a file blob
     });
