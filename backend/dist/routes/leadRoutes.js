@@ -7,6 +7,8 @@ const validationMiddleware_1 = require("../middlewares/validationMiddleware");
 const router = (0, express_1.Router)();
 // Protect all lead routes
 router.use(authMiddleware_1.protect);
+// Dynamic statistics route (placed before parameterized /:id route to prevent collision)
+router.get('/stats', leadController_1.getLeadStats);
 router
     .route('/')
     .get(leadController_1.getLeads)
@@ -16,5 +18,5 @@ router
     .route('/:id')
     .get(leadController_1.getLead)
     .patch(validationMiddleware_1.validateLead, leadController_1.updateLead)
-    .delete((0, authMiddleware_1.restrictTo)('Admin'), leadController_1.deleteLead);
+    .delete(leadController_1.deleteLead);
 exports.default = router;

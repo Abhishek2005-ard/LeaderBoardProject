@@ -1,6 +1,5 @@
 import React from 'react';
 import type { ILead } from '../../types';
-import { useAuth } from '../../context/AuthContext';
 import { Edit2, Trash2, Eye } from 'lucide-react';
 
 interface LeadTableProps {
@@ -12,9 +11,6 @@ interface LeadTableProps {
 }
 
 export const LeadTable: React.FC<LeadTableProps> = ({ leads, onEdit, onDelete, onViewDetails, isLoading }) => {
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'Admin';
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'New': return 'bg-blue-100 text-blue-800';

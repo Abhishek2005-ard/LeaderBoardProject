@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { leadService } from '../api/leadService';
 import type { ILead, PaginationMetadata, ILeadStats } from '../types';
-import { useAuth } from '../context/AuthContext';
 import { LeadTable } from '../components/leads/LeadTable';
 import { LeadFilters } from '../components/leads/LeadFilters';
 import { LeadPagination } from '../components/leads/LeadPagination';
@@ -11,8 +10,6 @@ import { Button } from '../components/common/Button';
 import { Plus } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { user } = useAuth();
-
   // Data State
   const [leads, setLeads] = useState<ILead[]>([]);
   const [pagination, setPagination] = useState<PaginationMetadata>({ total: 0, page: 1, pages: 1 });

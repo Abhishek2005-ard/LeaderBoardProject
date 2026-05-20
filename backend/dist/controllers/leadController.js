@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.exportLeads = exports.deleteLead = exports.updateLead = exports.getLead = exports.getLeads = exports.createLead = void 0;
+exports.getLeadStats = exports.exportLeads = exports.deleteLead = exports.updateLead = exports.getLead = exports.getLeads = exports.createLead = void 0;
 const Lead_1 = require("../models/Lead");
 const appError_1 = require("../utils/appError");
 const csvHelper_1 = require("../utils/csvHelper");
@@ -31,13 +31,13 @@ const createLead = async (req, res, next) => {
 };
 exports.createLead = createLead;
 /**
- * Get a paginated and filtered list of leads.
+ * Get a paginated and filtered list of leads isolated to the authenticated user.
  * Endpoint: GET /api/v1/leads
  */
 const getLeads = async (req, res, next) => {
     try {
-        // 1. Filtering
-        const filter = {};
+        // Scope queries strictly to the authenticated user
+        const filter = { createdBy: req.user?._id };
         if (req.query.status)
             filter.status = req.query.status;
         if (req.query.source)
@@ -45,9 +45,13 @@ const getLeads = async (req, res, next) => {
         // Fuzzy Search by Name or Email using regex
         if (req.query.search) {
             const searchRegex = new RegExp(req.query.search, 'i');
-            filter.$or = [
-                { name: searchRegex },
-                { email: searchRegex }
+            filter.$and = [
+                {
+                    $or: [
+                        { name: searchRegex },
+                        { email: searchRegex }
+                    ]
+                }
             ];
         }
         // 2. Sorting
@@ -78,14 +82,14 @@ const getLeads = async (req, res, next) => {
 };
 exports.getLeads = getLeads;
 /**
- * Get a single lead by ID.
+ * Get a single lead by ID, isolated to the authenticated user.
  * Endpoint: GET /api/v1/leads/:id
  */
 const getLead = async (req, res, next) => {
     try {
-        const lead = await Lead_1.Lead.findById(req.params.id);
+        const lead = await Lead_1.Lead.findOne({ _id: req.params.id, createdBy: req.user?._id });
         if (!lead) {
-            return next(new appError_1.AppError('No lead found with that ID', 404));
+            return next(new appError_1.AppError('No lead found with that ID or unauthorized access', 404));
         }
         res.status(200).json({
             status: 'success',
@@ -100,12 +104,12 @@ const getLead = async (req, res, next) => {
 };
 exports.getLead = getLead;
 /**
- * Update an existing lead.
+ * Update an existing lead, isolated to the authenticated user.
  * Endpoint: PATCH /api/v1/leads/:id
  */
 const updateLead = async (req, res, next) => {
     try {
-        const lead = await Lead_1.Lead.findByIdAndUpdate(req.params.id, {
+        const lead = await Lead_1.Lead.findOneAndUpdate({ _id: req.params.id, createdBy: req.user?._id }, {
             name: req.body.name,
             email: req.body.email,
             status: req.body.status,
@@ -115,7 +119,7 @@ const updateLead = async (req, res, next) => {
             runValidators: true
         });
         if (!lead) {
-            return next(new appError_1.AppError('No lead found with that ID', 404));
+            return next(new appError_1.AppError('No lead found with that ID or unauthorized access', 404));
         }
         res.status(200).json({
             status: 'success',
@@ -130,16 +134,15 @@ const updateLead = async (req, res, next) => {
 };
 exports.updateLead = updateLead;
 /**
- * Delete a lead permanently.
+ * Delete a lead permanently, isolated to the authenticated user.
  * Endpoint: DELETE /api/v1/leads/:id
  */
 const deleteLead = async (req, res, next) => {
     try {
-        const lead = await Lead_1.Lead.findByIdAndDelete(req.params.id);
+        const lead = await Lead_1.Lead.findOneAndDelete({ _id: req.params.id, createdBy: req.user?._id });
         if (!lead) {
-            return next(new appError_1.AppError('No lead found with that ID', 404));
+            return next(new appError_1.AppError('No lead found with that ID or unauthorized access', 404));
         }
-        // Standard RESTful pattern: Return 204 No Content for deletion success
         res.status(204).json({
             status: 'success',
             data: null
@@ -151,22 +154,25 @@ const deleteLead = async (req, res, next) => {
 };
 exports.deleteLead = deleteLead;
 /**
- * Export filtered leads as a CSV file.
+ * Export filtered leads as a CSV file, isolated to the authenticated user.
  * Endpoint: GET /api/v1/leads/export
  */
 const exportLeads = async (req, res, next) => {
     try {
-        // 1. Re-use identical filtering logic
-        const filter = {};
+        const filter = { createdBy: req.user?._id };
         if (req.query.status)
             filter.status = req.query.status;
         if (req.query.source)
             filter.source = req.query.source;
         if (req.query.search) {
             const searchRegex = new RegExp(req.query.search, 'i');
-            filter.$or = [
-                { name: searchRegex },
-                { email: searchRegex }
+            filter.$and = [
+                {
+                    $or: [
+                        { name: searchRegex },
+                        { email: searchRegex }
+                    ]
+                }
             ];
         }
         const sortBy = req.query.sort === 'oldest' ? { createdAt: 1 } : { createdAt: -1 };
@@ -185,3 +191,51 @@ const exportLeads = async (req, res, next) => {
     }
 };
 exports.exportLeads = exportLeads;
+/**
+ * Get dynamic lead statistics for the logged-in user.
+ * Endpoint: GET /api/v1/leads/stats
+ */
+const getLeadStats = async (req, res, next) => {
+    try {
+        const userId = req.user?._id;
+        if (!userId) {
+            return next(new appError_1.AppError('Authentication required', 401));
+        }
+        const stats = await Lead_1.Lead.aggregate([
+            { $match: { createdBy: userId } },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: 1 },
+                    new: { $sum: { $cond: [{ $eq: ['$status', 'New'] }, 1, 0] } },
+                    contacted: { $sum: { $cond: [{ $eq: ['$status', 'Contacted'] }, 1, 0] } },
+                    qualified: { $sum: { $cond: [{ $eq: ['$status', 'Qualified'] }, 1, 0] } },
+                    lost: { $sum: { $cond: [{ $eq: ['$status', 'Lost'] }, 1, 0] } },
+                }
+            }
+        ]);
+        const result = stats[0] || {
+            total: 0,
+            new: 0,
+            contacted: 0,
+            qualified: 0,
+            lost: 0
+        };
+        res.status(200).json({
+            status: 'success',
+            data: {
+                stats: {
+                    total: result.total,
+                    new: result.new,
+                    contacted: result.contacted,
+                    qualified: result.qualified,
+                    lost: result.lost
+                }
+            }
+        });
+    }
+    catch (err) {
+        next(err);
+    }
+};
+exports.getLeadStats = getLeadStats;
